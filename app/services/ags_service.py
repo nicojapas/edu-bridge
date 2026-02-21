@@ -127,8 +127,11 @@ async def submit_score(
 
     access_token = await get_access_token(scopes)
 
+    # Moodle expects timestamp with Z suffix, not +00:00
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
     payload = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": timestamp,
         "scoreGiven": score_given,
         "scoreMaximum": score_maximum,
         "activityProgress": activity_progress,
@@ -137,6 +140,7 @@ async def submit_score(
     }
 
     logger.info(f"Submitting score to {scores_url}: {score_given}/{score_maximum}")
+    logger.info(f"Score payload: {payload}")
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -149,9 +153,11 @@ async def submit_score(
             timeout=10.0,
         )
 
+        logger.info(f"Score response: status={response.status_code}, body={response.text}")
+
         if response.status_code not in (200, 201, 204):
             logger.error(f"Score submission failed: {response.status_code} {response.text}")
-            raise ValueError(f"Failed to submit score: {response.text}")
+            raise ValueError(f"Failed to submit score (HTTP {response.status_code}): {response.text}")
 
     logger.info("Score submitted successfully")
     return {"status": "success", "score_given": score_given}

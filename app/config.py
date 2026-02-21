@@ -21,7 +21,8 @@ class Settings:
 
     # AGS / OAuth 2.0
     ACCESS_TOKEN_URL: str = os.getenv("ACCESS_TOKEN_URL", "")
-    LTI_PRIVATE_KEY: str = os.getenv("LTI_PRIVATE_KEY", "")
+    # Private key may have escaped newlines (\n) in env var - convert to actual newlines
+    LTI_PRIVATE_KEY: str = os.getenv("LTI_PRIVATE_KEY", "").replace("\\n", "\n")
 
     # App URL (for redirect_uri construction)
     APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:8000")

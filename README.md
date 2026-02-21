@@ -33,6 +33,43 @@ When a student launches the tool from the LMS:
 
 The tool is stateless at the protocol level but persists domain data in PostgreSQL.
 
+
+┌─────────┐         ┌──────────────┐         ┌─────────┐
+│  User   │         │     LMS      │         │  Tool   │
+│(Browser)│         │  (Moodle)    │         │(FastAPI)│
+└────┬────┘         └──────┬───────┘         └────┬────┘
+     │                     │                      │
+     │  Click LTI link     │                      │
+     │────────────────────>│                      │
+     │                     │                      │
+     │                     │  GET /lti/login      │
+     │                     │  (iss, login_hint)   │
+     │<────────────────────┼─────────────────────>│
+     │                     │                      │
+     │                     │     Generate state   │
+     │                     │     + nonce, store   │
+     │                     │<─────────────────────│
+     │                     │                      │
+     │  302 Redirect to    │                      │
+     │  LMS auth endpoint  │                      │
+     │<────────────────────┼──────────────────────│
+     │                     │                      │
+     │  Auth + consent     │                      │
+     │────────────────────>│                      │
+     │                     │                      │
+     │                     │  POST /lti/launch    │
+     │                     │  (id_token, state)   │
+     │<────────────────────┼─────────────────────>│
+     │                     │                      │
+     │                     │     Verify state     │
+     │                     │     Validate JWT     │
+     │                     │     (fetch JWKS)     │
+     │                     │<─────────────────────│
+     │                     │                      │
+     │  HTML launch page   │                      │
+     │<───────────────────────────────────────────│
+
+
 ## Architecture
 ### Stack
 

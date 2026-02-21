@@ -8,6 +8,7 @@ from sqlalchemy.sql import text
 from app.config import settings
 from app.database import check_db_connection, get_session
 from app.logging_config import setup_logging, get_logger
+from app.routers import lti
 
 setup_logging()
 logger = get_logger(__name__)
@@ -29,6 +30,9 @@ app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan,
 )
+
+# Mount LTI router
+app.include_router(lti.router)
 
 
 @app.get("/health")

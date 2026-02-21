@@ -19,6 +19,10 @@ class Settings:
     LTI_JWKS_URL: str = os.getenv("LTI_JWKS_URL", "")
     LTI_DEPLOYMENT_ID: str = os.getenv("LTI_DEPLOYMENT_ID", "")
 
+    # AGS / OAuth 2.0
+    ACCESS_TOKEN_URL: str = os.getenv("ACCESS_TOKEN_URL", "")
+    LTI_PRIVATE_KEY: str = os.getenv("LTI_PRIVATE_KEY", "")
+
     # App URL (for redirect_uri construction)
     APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:8000")
 

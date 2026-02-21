@@ -7,10 +7,17 @@ Implements the OIDC-based LTI 1.3 launch flow:
 3. /lti/config - Tool configuration helper
 """
 
-from fastapi import APIRouter, Form, Request, HTTPException
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+import json
 
+from fastapi import APIRouter, Form, Request, HTTPException, Depends
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.database import get_session
+from app.models import LtiLaunch
 from app.services import lti_service
+from app.services import ags_service
 from app.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -70,6 +77,7 @@ async def lti_login_post(request: Request):
 async def lti_launch(
     id_token: str = Form(..., description="JWT from LMS"),
     state: str = Form(..., description="State we sent in login"),
+    session: AsyncSession = Depends(get_session),
 ):
     """
     OIDC Redirect URI / Launch Endpoint.
@@ -78,9 +86,8 @@ async def lti_launch(
     - LMS POSTs the id_token here after user authentication
     - We verify state matches what we sent
     - We validate the JWT (signature + claims)
-    - We extract launch data and display it
-
-    In a real app, this would establish a session and redirect to the tool UI.
+    - We extract launch data and store in DB
+    - We display appropriate UI based on role and AGS availability
     """
     logger.info("LTI launch received")
 
@@ -104,9 +111,45 @@ async def lti_launch(
     launch_data = lti_service.extract_launch_data(claims)
     logger.info(f"Launch successful for user: {launch_data.get('name')}")
 
-    # Step 4: Render launch page
-    # In production, you'd create a session and redirect to your app
-    html = lti_service.render_launch_page(launch_data)
+    # Step 4: Extract AGS claim if present
+    ags_claim = ags_service.extract_ags_claim(claims)
+    has_ags = ags_claim is not None
+
+    if has_ags:
+        logger.info(f"AGS available: lineitem={ags_claim.get('lineitem')}, lineitems={ags_claim.get('lineitems')}")
+    else:
+        logger.info("AGS not available for this launch")
+
+    # Step 5: Check if user is instructor
+    roles = launch_data.get("roles", [])
+    is_instructor = ags_service.is_instructor(roles)
+
+    # Step 6: Store launch context in database
+    launch_record = LtiLaunch(
+        user_sub=launch_data.get("sub"),
+        context_id=launch_data.get("context_id"),
+        resource_link_id=launch_data.get("resource_link_id"),
+        deployment_id=settings.LTI_DEPLOYMENT_ID,
+        lineitem_url=ags_claim.get("lineitem") if ags_claim else None,
+        lineitems_url=ags_claim.get("lineitems") if ags_claim else None,
+        ags_scopes=json.dumps(ags_claim.get("scope", [])) if ags_claim else None,
+        user_name=launch_data.get("name"),
+        user_email=launch_data.get("email"),
+        roles=json.dumps(roles),
+    )
+    session.add(launch_record)
+    await session.commit()
+    await session.refresh(launch_record)
+
+    logger.info(f"Launch stored with id={launch_record.id}")
+
+    # Step 7: Render launch page with AGS UI
+    html = lti_service.render_launch_page(
+        launch_data=launch_data,
+        launch_id=launch_record.id,
+        has_ags=has_ags,
+        is_instructor=is_instructor,
+    )
     return HTMLResponse(content=html)
 
 
@@ -117,8 +160,6 @@ async def lti_config():
 
     Returns JSON with tool configuration to help with manual
     registration in Moodle or other LMS platforms.
-
-    This is not part of the LTI spec, just a helper.
     """
     config = lti_service.get_tool_configuration()
     return JSONResponse(content=config)

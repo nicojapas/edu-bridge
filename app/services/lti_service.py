@@ -232,15 +232,90 @@ def extract_launch_data(claims: dict[str, Any]) -> dict[str, Any]:
     return launch_data
 
 
-def render_launch_page(launch_data: dict[str, Any]) -> str:
+def render_launch_page(
+    launch_data: dict[str, Any],
+    launch_id: int | None = None,
+    has_ags: bool = False,
+    is_instructor: bool = False,
+) -> str:
     """
     Render a simple HTML page showing launch information.
 
-    This is a placeholder - in a real app you'd redirect to your tool's UI.
+    If AGS is available and user is instructor, show grade submission form.
+    If AGS is available and user is student, show waiting message.
     """
     # Format roles nicely
     roles = launch_data.get("roles", [])
     role_items = "".join(f"<li>{role.split('#')[-1]}</li>" for role in roles)
+
+    # Build AGS section based on role
+    ags_section = ""
+    if has_ags:
+        if is_instructor:
+            ags_section = f"""
+            <div class="ags-section">
+                <h2>Submit Grade</h2>
+                <form id="gradeForm">
+                    <input type="hidden" name="launch_id" value="{launch_id}">
+                    <div class="field">
+                        <label class="label">Student ID (sub):</label>
+                        <input type="text" name="user_sub" placeholder="Enter student sub" required
+                               style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div class="field">
+                        <label class="label">Score (0-100):</label>
+                        <input type="number" name="score" min="0" max="100" required
+                               style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <button type="submit" style="margin-top: 12px; padding: 10px 20px; background: #3182ce; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Submit Grade
+                    </button>
+                </form>
+                <div id="result" style="margin-top: 12px;"></div>
+                <script>
+                    document.getElementById('gradeForm').addEventListener('submit', async (e) => {{
+                        e.preventDefault();
+                        const form = e.target;
+                        const resultDiv = document.getElementById('result');
+                        resultDiv.innerHTML = 'Submitting...';
+
+                        try {{
+                            const response = await fetch('/grades/submit', {{
+                                method: 'POST',
+                                headers: {{ 'Content-Type': 'application/json' }},
+                                body: JSON.stringify({{
+                                    launch_id: parseInt(form.launch_id.value),
+                                    user_sub: form.user_sub.value,
+                                    score: parseFloat(form.score.value)
+                                }})
+                            }});
+
+                            const data = await response.json();
+                            if (response.ok) {{
+                                resultDiv.innerHTML = '<span style="color: #38a169;">Grade submitted successfully!</span>';
+                            }} else {{
+                                resultDiv.innerHTML = '<span style="color: #e53e3e;">Error: ' + data.detail + '</span>';
+                            }}
+                        }} catch (err) {{
+                            resultDiv.innerHTML = '<span style="color: #e53e3e;">Error: ' + err.message + '</span>';
+                        }}
+                    }});
+                </script>
+            </div>
+            """
+        else:
+            ags_section = """
+            <div class="ags-section">
+                <h2>Grade Status</h2>
+                <p style="color: #718096;">Waiting for grade from instructor.</p>
+            </div>
+            """
+    else:
+        ags_section = """
+        <div class="ags-section">
+            <p style="color: #718096; font-size: 14px;">This launch does not support AGS (grading).</p>
+        </div>
+        """
 
     return f"""
     <!DOCTYPE html>
@@ -260,10 +335,16 @@ def render_launch_page(launch_data: dict[str, Any]) -> str:
                 border-radius: 8px;
                 padding: 24px;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
             }}
             h1 {{
                 color: #2d3748;
                 margin-top: 0;
+            }}
+            h2 {{
+                color: #2d3748;
+                margin-top: 0;
+                font-size: 18px;
             }}
             .field {{
                 margin: 12px 0;
@@ -282,6 +363,11 @@ def render_launch_page(launch_data: dict[str, Any]) -> str:
             .success {{
                 color: #38a169;
                 font-size: 14px;
+            }}
+            .ags-section {{
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid #e2e8f0;
             }}
         </style>
     </head>
@@ -306,14 +392,11 @@ def render_launch_page(launch_data: dict[str, Any]) -> str:
             </div>
 
             <div class="field">
-                <span class="label">Platform:</span>
-                <span class="value">{launch_data.get('platform_name') or 'Unknown'}</span>
+                <span class="label">Your Sub (User ID):</span>
+                <span class="value" style="font-family: monospace;">{launch_data.get('sub') or 'Unknown'}</span>
             </div>
 
-            <div class="field">
-                <span class="label">LTI Version:</span>
-                <span class="value">{launch_data.get('lti_version') or 'Unknown'}</span>
-            </div>
+            {ags_section}
         </div>
     </body>
     </html>

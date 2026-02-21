@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
 from app.config import settings
-from app.database import check_db_connection, get_session
+from app.database import check_db_connection, get_session, engine
 from app.logging_config import setup_logging, get_logger
-from app.routers import lti
+from app.models.lti_launch import Base
+from app.routers import lti, grades
 
 setup_logging()
 logger = get_logger(__name__)
@@ -18,8 +19,14 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"Starting {settings.APP_NAME}")
 
+    # Check database connection
     if not await check_db_connection():
         logger.warning("App starting without database connection")
+    else:
+        # Create tables if they don't exist
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables verified")
 
     yield
 
@@ -31,8 +38,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Mount LTI router
+# Mount routers
 app.include_router(lti.router)
+app.include_router(grades.router)
 
 
 @app.get("/health")

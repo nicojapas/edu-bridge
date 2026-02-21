@@ -8,6 +8,11 @@ venv/
 # Environment
 .env
 
+# Keys (never commit private keys!)
+*.pem
+scripts/private.pem
+scripts/public.pem
+
 # IDE
 .idea/
 .vscode/

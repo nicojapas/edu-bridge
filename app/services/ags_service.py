@@ -32,7 +32,7 @@ def _generate_client_assertion() -> str:
     """
     now = int(time.time())
 
-    header = {"alg": "RS256", "typ": "JWT"}
+    header = {"alg": "RS256", "typ": "JWT", "kid": "edubridge-1"}
 
     payload = {
         "iss": settings.LTI_CLIENT_ID,  # We are the issuer

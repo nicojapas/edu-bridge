@@ -1,4 +1,4 @@
-# EduBridge LTI – Minimal LTI 1.3 Tool Provider with Async Grading
+# EduBridge LTI – LTI 1.3 Tool Provider with Async Grading
 
 ## A production-style LTI 1.3 Advantage tool provider built with FastAPI, PostgreSQL, and async workflows.
 

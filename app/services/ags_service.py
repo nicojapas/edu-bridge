@@ -113,7 +113,12 @@ async def submit_score(
 
     Posts to {lineitem_url}/scores
     """
-    scores_url = f"{lineitem_url}/scores"
+    # Handle URLs with query strings - insert /scores before the query
+    if "?" in lineitem_url:
+        base, query = lineitem_url.split("?", 1)
+        scores_url = f"{base}/scores?{query}"
+    else:
+        scores_url = f"{lineitem_url}/scores"
 
     # Required scopes for score submission
     scopes = [

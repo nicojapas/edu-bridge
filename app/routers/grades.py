@@ -52,14 +52,14 @@ async def submit_grade(
     try:
         # If we have a direct lineitem URL, use it
         if launch.lineitem_url:
+            # Let submit_score fetch the actual scoreMaximum from the lineitem
             result = await ags_service.submit_score(
                 lineitem_url=launch.lineitem_url,
                 user_sub=submission.user_sub,
                 score_given=submission.score,
-                score_maximum=100.0,
             )
         else:
-            # Need to create a line item first
+            # Need to create a line item first - we control the scoreMaximum here
             lineitem_url = await ags_service.create_lineitem(
                 lineitems_url=launch.lineitems_url,
                 label="EduBridge Grade",
@@ -71,7 +71,7 @@ async def submit_grade(
                 lineitem_url=lineitem_url,
                 user_sub=submission.user_sub,
                 score_given=submission.score,
-                score_maximum=100.0,
+                score_maximum=100.0,  # We just created it with 100
             )
 
         return {"message": "Grade submitted successfully", "result": result}

@@ -100,11 +100,39 @@ async def get_access_token(scopes: list[str]) -> str:
     return data["access_token"]
 
 
+async def get_lineitem(lineitem_url: str) -> dict[str, Any]:
+    """
+    Fetch lineitem details from the LMS.
+    """
+    scopes = [
+        "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
+    ]
+
+    access_token = await get_access_token(scopes)
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            lineitem_url,
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Accept": "application/vnd.ims.lis.v2.lineitem+json",
+            },
+            timeout=10.0,
+        )
+
+        logger.info(f"Lineitem response: status={response.status_code}, body={response.text}")
+
+        if response.status_code != 200:
+            raise ValueError(f"Failed to fetch lineitem: {response.text}")
+
+        return response.json()
+
+
 async def submit_score(
     lineitem_url: str,
     user_sub: str,
     score_given: float,
-    score_maximum: float = 100.0,
+    score_maximum: float | None = None,  # If None, fetch from lineitem
     activity_progress: str = "Completed",
     grading_progress: str = "FullyGraded",
 ) -> dict[str, Any]:
@@ -113,6 +141,12 @@ async def submit_score(
 
     Posts to {lineitem_url}/scores
     """
+    # Fetch the actual scoreMaximum from the lineitem if not provided
+    if score_maximum is None:
+        lineitem = await get_lineitem(lineitem_url)
+        score_maximum = lineitem.get("scoreMaximum", 100.0)
+        logger.info(f"Fetched lineitem scoreMaximum: {score_maximum}")
+
     # Handle URLs with query strings - insert /scores before the query
     if "?" in lineitem_url:
         base, query = lineitem_url.split("?", 1)
@@ -130,9 +164,13 @@ async def submit_score(
     # Moodle expects timestamp with Z suffix, not +00:00
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
+    # Scale the score to match the lineitem's maximum
+    # User enters 0-100, we scale to 0-scoreMaximum
+    scaled_score = (score_given / 100.0) * score_maximum
+
     payload = {
         "timestamp": timestamp,
-        "scoreGiven": score_given,
+        "scoreGiven": scaled_score,
         "scoreMaximum": score_maximum,
         "activityProgress": activity_progress,
         "gradingProgress": grading_progress,

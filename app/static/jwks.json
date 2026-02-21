@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "alg": "RS256",
+      "kid": "edubridge-1",
+      "n": "tVqtccdve7Ff2x4QVyoQ36YdcLFLiJGTM_zzVC_cJp39PnGlbPmIDU1yqPFkGl-Z63jIjRlqZ7T6_st3cwR0bTbxxX-NznqjrI2X-nLywT4T9Sr1MYJqhoIyp8hVk5iSy4sn-uSC6esTbOx7w6oDDB1wJV2siPHOV-_INJU1-Mze70jp8dfx9iZ1MvLWkBv-IiF_oQuSz_WpNlz6JAOrIveMfMz8l2D5ZKk7iiT9HK-yiWJXVQ9EYTz3trDcBBxBsK9NuLNHvhaZUF68VPZc1JfPojR6nTJSaJgNdSIXGOngvWJzfUwC7lTHZDe5OnChFdsOLb9OjnV-7zSGUOJNEw",
+      "e": "AQAB"
+    }
+  ]
+}

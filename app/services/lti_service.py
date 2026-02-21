@@ -24,7 +24,6 @@ from app.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 # In-memory storage for state/nonce (sufficient for single-instance dev)
 # Production would use Redis or database
 _state_store: dict[str, dict[str, Any]] = {}
@@ -416,7 +415,8 @@ def get_tool_configuration() -> dict[str, Any]:
         "target_link_uri": settings.lti_redirect_uri,
         "client_id": settings.LTI_CLIENT_ID,
         "issuer": settings.LTI_ISSUER,
-        "jwks_url": settings.LTI_JWKS_URL,
+        "platform_jwks_url": settings.LTI_JWKS_URL,
+        "tool_jwks_url": f"{settings.APP_BASE_URL}/.well-known/jwks.json",
         "deployment_id": settings.LTI_DEPLOYMENT_ID,
         "public_key_type": "URL",
         "lti_version": "1.3.0",

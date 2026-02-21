@@ -1,7 +1,10 @@
+import json
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from fastapi import FastAPI, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
@@ -10,6 +13,10 @@ from app.database import check_db_connection, get_session, engine
 from app.logging_config import setup_logging, get_logger
 from app.models.lti_launch import Base
 from app.routers import lti, grades
+
+# Load JWKS once at module load
+_jwks_path = Path(__file__).parent / "static" / "jwks.json"
+_jwks = json.loads(_jwks_path.read_text())
 
 setup_logging()
 logger = get_logger(__name__)
@@ -56,3 +63,9 @@ async def health(session: AsyncSession = Depends(get_session)) -> dict:
         "status": "healthy" if db_ok else "degraded",
         "database": "connected" if db_ok else "disconnected",
     }
+
+
+@app.get("/.well-known/jwks.json", response_class=JSONResponse)
+async def jwks():
+    """Serve the tool's public key for JWT signature verification."""
+    return _jwks

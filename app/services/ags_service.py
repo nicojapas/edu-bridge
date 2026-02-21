@@ -144,7 +144,8 @@ async def submit_score(
     # Fetch the actual scoreMaximum from the lineitem if not provided
     if score_maximum is None:
         lineitem = await get_lineitem(lineitem_url)
-        score_maximum = lineitem.get("scoreMaximum", 100.0)
+        logger.info(f"Lineitem data: {lineitem}")
+        score_maximum = float(lineitem.get("scoreMaximum", 100.0))
         logger.info(f"Fetched lineitem scoreMaximum: {score_maximum}")
 
     # Handle URLs with query strings - insert /scores before the query
@@ -164,14 +165,14 @@ async def submit_score(
     # Moodle expects timestamp with Z suffix, not +00:00
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
-    # Scale the score to match the lineitem's maximum
-    # User enters 0-100, we scale to 0-scoreMaximum
-    scaled_score = (score_given / 100.0) * score_maximum
+    # Don't scale - user enters raw score value
+    # (We'll add proper scaling later if needed)
+    logger.info(f"Score: {score_given} (max: {score_maximum})")
 
     payload = {
         "timestamp": timestamp,
-        "scoreGiven": scaled_score,
-        "scoreMaximum": score_maximum,
+        "scoreGiven": float(score_given),
+        "scoreMaximum": float(score_maximum),
         "activityProgress": activity_progress,
         "gradingProgress": grading_progress,
         "userId": user_sub,

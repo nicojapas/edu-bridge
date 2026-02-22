@@ -34,42 +34,6 @@ When a student launches the tool from the LMS:
 The tool is stateless at the protocol level but persists domain data in PostgreSQL.
 
 
-┌─────────┐         ┌──────────────┐         ┌─────────┐
-│  User   │         │     LMS      │         │  Tool   │
-│(Browser)│         │  (Moodle)    │         │(FastAPI)│
-└────┬────┘         └──────┬───────┘         └────┬────┘
-     │                     │                      │
-     │  Click LTI link     │                      │
-     │────────────────────>│                      │
-     │                     │                      │
-     │                     │  GET /lti/login      │
-     │                     │  (iss, login_hint)   │
-     │<────────────────────┼─────────────────────>│
-     │                     │                      │
-     │                     │     Generate state   │
-     │                     │     + nonce, store   │
-     │                     │<─────────────────────│
-     │                     │                      │
-     │  302 Redirect to    │                      │
-     │  LMS auth endpoint  │                      │
-     │<────────────────────┼──────────────────────│
-     │                     │                      │
-     │  Auth + consent     │                      │
-     │────────────────────>│                      │
-     │                     │                      │
-     │                     │  POST /lti/launch    │
-     │                     │  (id_token, state)   │
-     │<────────────────────┼─────────────────────>│
-     │                     │                      │
-     │                     │     Verify state     │
-     │                     │     Validate JWT     │
-     │                     │     (fetch JWKS)     │
-     │                     │<─────────────────────│
-     │                     │                      │
-     │  HTML launch page   │                      │
-     │<───────────────────────────────────────────│
-
-
 ## Architecture
 ### Stack
 
@@ -290,6 +254,77 @@ docker run -p 8000:8000 edubridge-lti
 - LMS-agnostic implementation
 - Extensible AI grading pipeline
 - Production-style schema and service separation
+
+
+## Diagrams
+
+### 1️⃣ LTI 1.3 Launch Flow (OIDC Authentication)
+```
+┌─────────┐         ┌──────────────┐           ┌────────────┐
+│  User   │         │     LMS      │           │    Tool    │
+│(Browser)│         │  (Moodle)    │           │ (FastAPI)  │
+└────┬────┘         └──────┬───────┘           └────┬───────┘
+     │                     │                        │
+     │ Click LTI activity  │                        │
+     │────────────────────>│                        │
+     │                     │ Redirect to tool       │
+     │                     │───────────────────────>│
+     │                     │     GET /lti/login     │
+     │                     │ (iss, login_hint, ...) │
+     │                     │                        │
+     │                     │        Validate issuer │
+     │                     │        Generate state  │
+     │                     │        + nonce         │
+     │                     │<───────────────────────│
+     │ 302 Redirect to LMS │                        │
+     │<────────────────────│                        │
+     │                     │                        │
+     │ Authenticate user   │                        │
+     │────────────────────>│                        │
+     │                     │ POST /lti/launch       │
+     │                     │ (id_token, state)      │
+     │                     │───────────────────────>│
+     │                     │                        │
+     │                     │   Verify state + nonce │
+     │                     │   Validate JWT (JWKS)  │
+     │                     │   Extract LTI claims   │
+     │                     │   Persist launch       │
+     │                     │<───────────────────────│
+     │ Render launch page  │                        │
+     │<─────────────────────────────────────────────│
+```
+
+### 2️⃣ Essay Evaluation + AGS Grade Passback Flow
+
+```
+┌─────────┐         ┌──────────────┐           ┌────────────┐
+│  User   │         │     LMS      │           │    Tool    │
+│(Browser)│         │  (Moodle)    │           │ (FastAPI)  │
+└────┬────┘         └──────┬───────┘           └────┬───────┘
+     │                     │                        │
+     │ Submit Essay        │                        │
+     │─────────────────────────────────────────────>│
+     │                     │                        │
+     │                     │   Evaluate essay       │
+     │                     │   Compute score        │
+     │                     │   Store submission     │
+     │                     │                        │
+     │                     │ POST /mod/lti/token.php│
+     │                     │<───────────────────────│
+     │                     │   access_token         │
+     │                     │───────────────────────>│
+     │                     │                        │
+     │                     │ POST {lineitem}/scores │
+     │                     │ (Bearer access_token)  │
+     │                     │<───────────────────────│
+     │                     │   200 OK               │
+     │                     │───────────────────────>│
+     │                     │                        │
+     │                     │  Grade stored in LMS   │
+     │                     │                        │
+     │ Show feedback       │                        │
+     │<─────────────────────────────────────────────│
+```
 
 ## Extensibility
 

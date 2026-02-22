@@ -9,6 +9,8 @@
 
 **[Live Demo](https://edu-bridge-rlur.onrender.com)** | **[Moodle Integration](https://edubridge.moodlecloud.com/)**
 
+https://github.com/user-attachments/assets/b6b46145-8ecf-4091-8a20-11509964b766
+
 This project demonstrates how to implement a secure, backend-focused LMS integration including:
 
 - LTI 1.3 OIDC launch validation

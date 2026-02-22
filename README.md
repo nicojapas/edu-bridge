@@ -1,14 +1,19 @@
-# EduBridge LTI – LTI 1.3 Tool Provider with Async Grading
+# EduBridge LTI – LTI 1.3 Tool Provider with Auto-Grading
 
-## A production-style LTI 1.3 Advantage tool provider built with FastAPI, PostgreSQL, and async workflows.
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+> A production-style LTI 1.3 Advantage tool that integrates with learning management systems to provide AI-ready essay grading with automatic grade passback.
+
+**[Live Demo](https://edu-bridge-rlur.onrender.com)** | **[Moodle Integration](https://edubridge.moodlecloud.com/)**
 
 This project demonstrates how to implement a secure, backend-focused LMS integration including:
 
 - LTI 1.3 OIDC launch validation
 - JWT verification using LMS public keys (JWK)
-- Assignment ingestion
-- Submission processing
-- Async grading workflow
+- Essay submission and auto-grading
 - LTI Advantage AGS grade passback
 - PostgreSQL schema design
 - Dockerized deployment
@@ -28,7 +33,7 @@ When a student launches the tool from the LMS:
     - Extracts user, course, and assignment context
 4. The student can submit an assignment
 5. The backend processes the submission asynchronously
-6. A grade is computed
+6. A grade is computed (currently heuristic-based, designed for AI integration)
 7. The grade is sent back to the LMS using AGS (Assignment & Grade Services)
 
 The tool is stateless at the protocol level but persists domain data in PostgreSQL.
@@ -37,14 +42,13 @@ The tool is stateless at the protocol level but persists domain data in PostgreS
 ## Architecture
 ### Stack
 
-- Python 3.12
+- Python 3.11
 - FastAPI (async)
 - PostgreSQL
 - SQLAlchemy (async)
 - httpx (async HTTP client)
-- PyJWT
+- Authlib (JWT/JWK handling)
 - Docker
-- Deployed on Render / Railway / Fly.io
 
 ### System Diagram
 
@@ -52,12 +56,10 @@ LMS (Moodle / Blackboard / Canvas)
 ↓  
 LTI 1.3 Launch (OIDC + JWT)  
 ↓  
-FastAPI Backend  
-↓  
-PostgreSQL  
-↓  
-Async Grading Worker  
-↓  
+FastAPI Backend
+↓
+PostgreSQL + Async Grading Service
+↓
 LTI Advantage AGS Grade Passback  
 ↓  
 LMS Gradebook
@@ -95,71 +97,57 @@ Security considerations:
 ### 2. Domain Model (PostgreSQL)
 Tables
 
-users
+lti_launches
 - id
-- lti_sub
-- name
-- email
-- created_at
-courses
-- id
-- lti_context_id
-- title
-assignments
-- id
+- user_sub
+- context_id
 - resource_link_id
-- course_id
-- title
-- max_score
+- deployment_id
+- lineitem_url (AGS endpoint)
+- lineitems_url (AGS endpoint)
+- ags_scopes (JSON)
+- user_name
+- user_email
+- roles (JSON)
+- created_at
+
 submissions
 - id
-- assignment_id
-- user_id
-- content
-- status (pending, graded)
-- created_at
-grades
-- id
-- submission_id
+- launch_id (FK to lti_launches)
+- user_sub
+- essay_text
 - score
 - feedback
-- sent_to_lms (boolean)
 - created_at
 
 Design goals:
 - Clear foreign key relationships
-- Separation between submission and grade
-- Support for regrading
-- Multi-tenant readiness
+- Launch context preserved for grade passback
+- Inline scoring with submission record
 
 ### 3. Submission Processing
 
 Endpoint:
 
-POST /submit
+POST /submission/evaluate
 
 Flow:
-- Stores submission
-- Marks status as pending
-- Triggers async grading task
-- Returns immediate response
-No blocking request cycle.
+- Receives essay text and launch context
+- Triggers async grading (currently heuristic, designed for AI)
+- Stores submission with score and feedback
+- Pushes grade to LMS via AGS
+- Returns feedback to student
 
-### 4. Async Grading Workflow
+### 4. Async Grading Service
 
-Implemented using FastAPI background tasks (can be replaced with Redis / Celery).
+Designed for async AI grading integration. Currently uses a deterministic heuristic as a placeholder.
 
-Flow:
-1. Submission created
-2. Async task triggered
-3. Grading service evaluates submission
-4. Grade stored in database
-5. AGS passback triggered
+Current scoring formula (placeholder):
+- Base score: min(word_count / 5, 80)
+- Keyword bonus: +5 per detected keyword (ai, education, integrity, learning)
+- Final score: min(base + bonus, 100)
 
-Example grading logic (mock AI):
-- Text length heuristic
-- Can be replaced with LLM call
-- Designed to be AI-service pluggable
+The grading service is async-ready and can be replaced with an LLM API call.
 
 ### 5. LTI Advantage – Assignment & Grade Services (AGS)
 
@@ -168,50 +156,58 @@ Implements:
 OAuth 2.0 Client Credentials Flow
 
 Steps:
-1. Exchange client credentials for access token
-2. Use token to POST score to LMS AGS endpoint
-3. Mark grade as sent_to_lms = true
+1. Generate signed JWT client assertion
+2. Exchange for access token via client credentials flow
+3. POST score to LMS AGS endpoint
 
 Score payload includes:
 - scoreGiven
 - scoreMaximum
-- comment
 - timestamp
 - activityProgress
 - gradingProgress
+- userId
 
-Handles token expiration and retry logic.
+Caches access tokens until expiration.
 
 ## API Endpoints
 
-POST /lti/login  
-POST /lti/launch  
-POST /submit  
-GET /health  
+GET|POST /lti/login - OIDC login initiation
+POST /lti/launch - OIDC redirect URI (receives id_token)
+GET /lti/config - Tool configuration helper
+POST /submission/evaluate - Submit essay for AI grading
+GET /submission/instructor/{launch_id} - Instructor submissions view
+POST /grades/submit - Manual grade submission
+GET /health - Health check
+GET /.well-known/jwks.json - Tool public key  
 
 ## Local Development
 1. Clone
 
-git clone <repo>
-cd edubridge-lti
+git clone https://github.com/YOUR_USERNAME/edu-bridge.git
+cd edu-bridge
 
 2. Environment Variables
 
 Create .env file:
 
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost/db
+DATABASE_URL=postgresql://user:pass@localhost/db
 LTI_CLIENT_ID=...
-LTI_CLIENT_SECRET=...
 LTI_ISSUER=...
+LTI_AUTHORIZATION_ENDPOINT=...
 LTI_JWKS_URL=...
-LTI_TOKEN_URL=...
+LTI_DEPLOYMENT_ID=...
+ACCESS_TOKEN_URL=...
+LTI_PRIVATE_KEY=...
+APP_BASE_URL=http://localhost:8000
 
-3. Run Database
+3. Run with Docker Compose
 
-docker-compose up -d postgres
+docker-compose up
 
-4. Run App
+Or run separately:
 
+docker-compose up -d db
 uvicorn app.main:app --reload
 
 ## Docker
@@ -243,16 +239,14 @@ docker run -p 8000:8000 edubridge-lti
 - Nonce validation to prevent replay attacks
 - Strict issuer and audience checking
 - No trust in client-side data
-- Async tasks isolated from request lifecycle
 - Sensitive credentials stored in environment variables
 
 ## Design Principles
 
-- Backend-first, no unnecessary frontend
+- Backend-first, minimal frontend (Jinja2 templates)
 - Integration clarity over UI polish
-- Async by default
+- Async-first design for AI service integration
 - LMS-agnostic implementation
-- Extensible AI grading pipeline
 - Production-style schema and service separation
 
 
@@ -326,16 +320,13 @@ docker run -p 8000:8000 edubridge-lti
      │<─────────────────────────────────────────────│
 ```
 
-## Extensibility
+## Roadmap
 
-Can be extended with:
-- Rubric-based grading
-- Structured AI feedback
-- Instructor dashboard
-- Deep Linking (LTI 1.3)
-- NRPS (Names and Roles Provisioning Service)
-- Multi-tenant key management
-- Keycloak integration
+- [ ] Integration tests with pytest
+- [ ] LLM-based grading (OpenAI/Claude API)
+- [ ] Deep Linking support (LTI 1.3)
+- [ ] NRPS integration (Names and Roles Provisioning Service)
+- [ ] Multi-tenant deployment with separate key management
 
 ## What This Project Demonstrates
 
@@ -343,10 +334,9 @@ Can be extended with:
 - OIDC and OAuth 2.0 flows
 - JWT validation and JWK handling
 - Secure third-party platform integration
-- Async event-driven backend design
 - PostgreSQL schema modeling
 - Grade passback via LTI Advantage
-- AI-service integration pattern
+- Async-ready AI grading pipeline
 
 ## Why This Matters
 
@@ -358,3 +348,7 @@ Modern EdTech platforms require:
 - Production-grade integration design
 
 This project demonstrates the architectural foundations required to build and harden such integrations.
+
+## License
+
+MIT

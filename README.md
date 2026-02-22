@@ -9,7 +9,7 @@
 
 **[Live Demo](https://edu-bridge-rlur.onrender.com)** | **[Moodle Integration](https://edubridge.moodlecloud.com/)**
 
-https://github.com/user-attachments/assets/b6b46145-8ecf-4091-8a20-11509964b766
+https://github.com/user-attachments/assets/8eeb29f3-12d2-41e9-95c9-1096affe0ae7
 
 This project demonstrates how to implement a secure, backend-focused LMS integration including:
 

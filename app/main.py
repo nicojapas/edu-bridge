@@ -12,7 +12,8 @@ from app.config import settings
 from app.database import check_db_connection, get_session, engine
 from app.logging_config import setup_logging, get_logger
 from app.models.lti_launch import Base
-from app.routers import lti, grades
+from app.models.submission import Submission  # noqa: F401 - registers model with Base
+from app.routers import lti, grades, submission
 
 # Load JWKS once at module load
 _jwks_path = Path(__file__).parent / "static" / "jwks.json"
@@ -48,6 +49,7 @@ app = FastAPI(
 # Mount routers
 app.include_router(lti.router)
 app.include_router(grades.router)
+app.include_router(submission.router)
 
 
 @app.get("/health")

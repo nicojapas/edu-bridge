@@ -240,8 +240,8 @@ def render_launch_page(
     """
     Render a simple HTML page showing launch information.
 
-    If AGS is available and user is instructor, show grade submission form.
-    If AGS is available and user is student, show waiting message.
+    If AGS is available and user is instructor, show link to submissions view.
+    If AGS is available and user is student, show essay submission form.
     """
     # Format roles nicely
     roles = launch_data.get("roles", [])
@@ -251,9 +251,18 @@ def render_launch_page(
     ags_section = ""
     if has_ags:
         if is_instructor:
+            # Instructor view: link to submissions and manual grade form
             ags_section = f"""
             <div class="ags-section">
-                <h2>Submit Grade</h2>
+                <h2>Instructor Tools</h2>
+                <p>
+                    <a href="/submission/instructor/{launch_id}"
+                       style="display: inline-block; padding: 10px 20px; background: #3182ce; color: white; text-decoration: none; border-radius: 4px;">
+                        View Student Submissions
+                    </a>
+                </p>
+
+                <h3 style="margin-top: 24px; font-size: 16px;">Manual Grade Override</h3>
                 <form id="gradeForm">
                     <input type="hidden" name="launch_id" value="{launch_id}">
                     <div class="field">
@@ -266,8 +275,8 @@ def render_launch_page(
                         <input type="number" name="score" min="0" max="100" required
                                style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;">
                     </div>
-                    <button type="submit" style="margin-top: 12px; padding: 10px 20px; background: #3182ce; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        Submit Grade
+                    <button type="submit" style="margin-top: 12px; padding: 10px 20px; background: #718096; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Submit Manual Grade
                     </button>
                 </form>
                 <div id="result" style="margin-top: 12px;"></div>
@@ -303,10 +312,78 @@ def render_launch_page(
             </div>
             """
         else:
-            ags_section = """
+            # Student view: essay submission form
+            ags_section = f"""
             <div class="ags-section">
-                <h2>Grade Status</h2>
-                <p style="color: #718096;">Waiting for grade from instructor.</p>
+                <h2>Submit Your Essay</h2>
+                <p style="color: #718096; margin-bottom: 16px;">
+                    Write your essay below. It will be evaluated by our AI grading system and your score will be automatically submitted.
+                </p>
+                <form id="essayForm">
+                    <input type="hidden" name="launch_id" value="{launch_id}">
+                    <div class="field">
+                        <label class="label">Your Essay:</label>
+                        <textarea name="essay_text" rows="10" required
+                                  placeholder="Write about AI in education, learning integrity, or related topics..."
+                                  style="width: 100%; padding: 12px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    <p style="color: #718096; font-size: 12px; margin: 8px 0;">
+                        Tip: Include keywords like "ai", "education", "integrity", "learning" for bonus points!
+                    </p>
+                    <button type="submit" id="submitBtn" style="margin-top: 12px; padding: 12px 24px; background: #38a169; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+                        Submit for AI Evaluation
+                    </button>
+                </form>
+                <div id="result" style="margin-top: 20px;"></div>
+                <script>
+                    document.getElementById('essayForm').addEventListener('submit', async (e) => {{
+                        e.preventDefault();
+                        const form = e.target;
+                        const resultDiv = document.getElementById('result');
+                        const submitBtn = document.getElementById('submitBtn');
+
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = 'Evaluating...';
+                        resultDiv.innerHTML = '<p style="color: #718096;">Processing your submission...</p>';
+
+                        try {{
+                            const response = await fetch('/submission/evaluate', {{
+                                method: 'POST',
+                                headers: {{ 'Content-Type': 'application/json' }},
+                                body: JSON.stringify({{
+                                    launch_id: parseInt(form.launch_id.value),
+                                    essay_text: form.essay_text.value
+                                }})
+                            }});
+
+                            const data = await response.json();
+                            if (response.ok) {{
+                                const feedbackHtml = data.feedback.replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>');
+                                resultDiv.innerHTML = `
+                                    <div style="background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 8px; padding: 16px;">
+                                        <h3 style="color: #276749; margin: 0 0 16px 0;">Evaluation Complete!</h3>
+                                        <div style="background: white; padding: 16px; border-radius: 4px; margin-bottom: 12px;">
+                                            ${{feedbackHtml}}
+                                        </div>
+                                        <p style="color: #718096; font-size: 12px; margin: 0;">
+                                            Grade passback: ${{data.grade_passback_status}}
+                                        </p>
+                                    </div>
+                                `;
+                                submitBtn.innerHTML = 'Submitted!';
+                                submitBtn.style.background = '#718096';
+                            }} else {{
+                                resultDiv.innerHTML = '<p style="color: #e53e3e;">Error: ' + data.detail + '</p>';
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = 'Submit for AI Evaluation';
+                            }}
+                        }} catch (err) {{
+                            resultDiv.innerHTML = '<p style="color: #e53e3e;">Error: ' + err.message + '</p>';
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = 'Submit for AI Evaluation';
+                        }}
+                    }});
+                </script>
             </div>
             """
     else:
@@ -345,6 +422,9 @@ def render_launch_page(
                 margin-top: 0;
                 font-size: 18px;
             }}
+            h3 {{
+                color: #4a5568;
+            }}
             .field {{
                 margin: 12px 0;
             }}
@@ -372,7 +452,7 @@ def render_launch_page(
     </head>
     <body>
         <div class="card">
-            <p class="success">✓ LTI 1.3 Launch Successful</p>
+            <p class="success">LTI 1.3 Launch Successful</p>
             <h1>Welcome, {launch_data.get('name') or 'User'}!</h1>
 
             <div class="field">

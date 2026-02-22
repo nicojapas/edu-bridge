@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}LTI Launch Successful{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/launch.css">
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <p class="success">LTI 1.3 Launch Successful</p>
+    <h1>Welcome, {{ launch_data.name or 'User' }}!</h1>
+
+    <div class="field">
+        <span class="label">Email:</span>
+        <span class="value">{{ launch_data.email or 'Not provided' }}</span>
+    </div>
+
+    <div class="field">
+        <span class="label">Course:</span>
+        <span class="value">{{ launch_data.context_title or 'Not provided' }}</span>
+    </div>
+
+    <div class="field">
+        <span class="label">Roles:</span>
+        <ul>
+            {% for role in launch_data.roles %}
+            <li>{{ role.split('#')[-1] }}</li>
+            {% else %}
+            <li>None</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="field">
+        <span class="label">Your Sub (User ID):</span>
+        <span class="value mono">{{ launch_data.sub or 'Unknown' }}</span>
+    </div>
+
+    <div class="ags-section">
+        {% if has_ags %}
+            {% if is_instructor %}
+                {% include "partials/instructor_tools.html" %}
+            {% else %}
+                {% include "partials/student_essay_form.html" %}
+            {% endif %}
+        {% else %}
+            <p class="muted">This launch does not support AGS (grading).</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

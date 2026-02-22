@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Instructor View - Submissions{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/instructor.css">
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Student Submissions</h1>
+    <p class="muted">Context: {{ context_id }}</p>
+
+    {% if submissions %}
+    <table>
+        <thead>
+            <tr>
+                <th>Student ID</th>
+                <th>Score</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sub in submissions %}
+            <tr>
+                <td class="student-id">{{ sub.user_sub[:20] }}...</td>
+                <td class="score score-{{ 'high' if sub.score >= 70 else 'low' if sub.score < 50 else 'mid' }}">
+                    {{ sub.score|int }}/100
+                </td>
+                <td class="timestamp">{{ sub.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <button onclick="showFeedback({{ sub.id }})" class="btn btn-sm">
+                        View Details
+                    </button>
+                </td>
+            </tr>
+            <tr id="feedback-{{ sub.id }}" class="feedback-row" style="display: none;">
+                <td colspan="4" class="feedback-cell">
+                    <strong>Essay:</strong>
+                    <pre class="content-preview">{{ sub.essay_text[:500] }}{% if sub.essay_text|length > 500 %}...{% endif %}</pre>
+                    <strong>Feedback:</strong>
+                    <pre class="content-preview">{{ sub.feedback }}</pre>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty">No submissions yet.</div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showFeedback(id) {
+    const row = document.getElementById('feedback-' + id);
+    if (row.style.display === 'none') {
+        row.style.display = 'table-row';
+    } else {
+        row.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

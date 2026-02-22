@@ -1,0 +1,82 @@
+/* Instructor submissions page styles */
+body {
+    max-width: 900px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+    background: #f7fafc;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.student-id {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.score {
+    font-weight: bold;
+}
+
+.score-high {
+    color: #38a169;
+}
+
+.score-mid {
+    color: #d69e2e;
+}
+
+.score-low {
+    color: #e53e3e;
+}
+
+.timestamp {
+    font-size: 12px;
+}
+
+.feedback-row {
+    /* Hidden by default, shown via JS */
+}
+
+.feedback-cell {
+    background: #f7fafc;
+    padding: 16px;
+}
+
+.content-preview {
+    white-space: pre-wrap;
+    background: white;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    margin: 8px 0;
+    font-family: inherit;
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 16px;
+    color: #3182ce;
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.empty {
+    color: #718096;
+    padding: 40px;
+    text-align: center;
+}

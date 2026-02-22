@@ -1,0 +1,53 @@
+<h2>Instructor Tools</h2>
+<p>
+    <a href="/submission/instructor/{{ launch_id }}" class="btn btn-primary">
+        View Student Submissions
+    </a>
+</p>
+
+<h3 class="manual-grade-title">Manual Grade Override</h3>
+<form id="gradeForm">
+    <input type="hidden" name="launch_id" value="{{ launch_id }}">
+    <div class="field">
+        <label class="label">Student ID (sub):</label>
+        <input type="text" name="user_sub" placeholder="Enter student sub" required class="form-input">
+    </div>
+    <div class="field">
+        <label class="label">Score (0-100):</label>
+        <input type="number" name="score" min="0" max="100" required class="form-input">
+    </div>
+    <button type="submit" class="btn btn-secondary" style="margin-top: 12px;">
+        Submit Manual Grade
+    </button>
+</form>
+<div id="result" class="result-container"></div>
+
+<script>
+document.getElementById('gradeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = 'Submitting...';
+
+    try {
+        const response = await fetch('/grades/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                launch_id: parseInt(form.launch_id.value),
+                user_sub: form.user_sub.value,
+                score: parseFloat(form.score.value)
+            })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            resultDiv.innerHTML = '<span class="success">Grade submitted successfully!</span>';
+        } else {
+            resultDiv.innerHTML = '<span class="error">Error: ' + data.detail + '</span>';
+        }
+    } catch (err) {
+        resultDiv.innerHTML = '<span class="error">Error: ' + err.message + '</span>';
+    }
+});
+</script>

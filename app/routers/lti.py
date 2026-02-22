@@ -8,9 +8,11 @@ Implements the OIDC-based LTI 1.3 launch flow:
 """
 
 import json
+from pathlib import Path
 
 from fastapi import APIRouter, Form, Request, HTTPException, Depends
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -19,6 +21,8 @@ from app.models import LtiLaunch
 from app.services import lti_service
 from app.services import ags_service
 from app.logging_config import get_logger
+
+templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates")
 
 logger = get_logger(__name__)
 
@@ -73,8 +77,9 @@ async def lti_login_post(request: Request):
     return await _handle_login(dict(form))
 
 
-@router.post("/launch", response_class=HTMLResponse)
+@router.post("/launch")
 async def lti_launch(
+    request: Request,
     id_token: str = Form(..., description="JWT from LMS"),
     state: str = Form(..., description="State we sent in login"),
     session: AsyncSession = Depends(get_session),
@@ -144,13 +149,16 @@ async def lti_launch(
     logger.info(f"Launch stored with id={launch_record.id}")
 
     # Step 7: Render launch page with AGS UI
-    html = lti_service.render_launch_page(
-        launch_data=launch_data,
-        launch_id=launch_record.id,
-        has_ags=has_ags,
-        is_instructor=is_instructor,
+    return templates.TemplateResponse(
+        request=request,
+        name="launch.html",
+        context={
+            "launch_data": launch_data,
+            "launch_id": launch_record.id,
+            "has_ags": has_ags,
+            "is_instructor": is_instructor,
+        },
     )
-    return HTMLResponse(content=html)
 
 
 @router.get("/config", response_class=JSONResponse)

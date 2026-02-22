@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Depends
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
@@ -45,6 +46,9 @@ app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan,
 )
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
 # Mount routers
 app.include_router(lti.router)

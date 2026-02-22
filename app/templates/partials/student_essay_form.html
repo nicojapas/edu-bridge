@@ -1,0 +1,71 @@
+<h2>Submit Your Essay</h2>
+<p class="muted" style="margin-bottom: 16px;">
+    Write your essay below. It will be evaluated by our AI grading system and your score will be automatically submitted.
+</p>
+<form id="essayForm">
+    <input type="hidden" name="launch_id" value="{{ launch_id }}">
+    <div class="field">
+        <label class="label">Your Essay:</label>
+        <textarea name="essay_text" rows="10" required
+                  placeholder="Write about AI in education, learning integrity, or related topics..."
+                  class="form-textarea"></textarea>
+    </div>
+    <p class="muted hint-text">
+        Tip: Include keywords like "ai", "education", "integrity", "learning" for bonus points!
+    </p>
+    <button type="submit" id="submitBtn" class="btn btn-success btn-lg">
+        Submit for AI Evaluation
+    </button>
+</form>
+<div id="result" class="result-container"></div>
+
+<script>
+document.getElementById('essayForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const resultDiv = document.getElementById('result');
+    const submitBtn = document.getElementById('submitBtn');
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = 'Evaluating...';
+    resultDiv.innerHTML = '<p class="muted">Processing your submission...</p>';
+
+    try {
+        const response = await fetch('/submission/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                launch_id: parseInt(form.launch_id.value),
+                essay_text: form.essay_text.value
+            })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            const feedbackHtml = data.feedback.replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            resultDiv.innerHTML = `
+                <div class="result-success">
+                    <h3 class="result-title">Evaluation Complete!</h3>
+                    <div class="feedback-content">
+                        ${feedbackHtml}
+                    </div>
+                    <p class="muted passback-status">
+                        Grade passback: ${data.grade_passback_status}
+                    </p>
+                </div>
+            `;
+            submitBtn.innerHTML = 'Submitted!';
+            submitBtn.classList.remove('btn-success');
+            submitBtn.classList.add('btn-secondary');
+        } else {
+            resultDiv.innerHTML = '<p class="error">Error: ' + data.detail + '</p>';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Submit for AI Evaluation';
+        }
+    } catch (err) {
+        resultDiv.innerHTML = '<p class="error">Error: ' + err.message + '</p>';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit for AI Evaluation';
+    }
+});
+</script>

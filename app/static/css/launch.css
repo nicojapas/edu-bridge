@@ -1,0 +1,50 @@
+/* Launch page specific styles */
+body {
+    max-width: 600px;
+}
+
+.mono {
+    font-family: monospace;
+}
+
+.ags-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Instructor tools */
+.manual-grade-title {
+    margin-top: 24px;
+    font-size: 16px;
+}
+
+/* Student essay form */
+.hint-text {
+    font-size: 12px;
+    margin: 8px 0;
+}
+
+.btn-lg {
+    margin-top: 12px;
+    padding: 12px 24px;
+    font-size: 16px;
+}
+
+/* Result display */
+.result-title {
+    color: #276749;
+    margin: 0 0 16px 0;
+}
+
+.feedback-content {
+    background: white;
+    padding: 16px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.passback-status {
+    font-size: 12px;
+    margin: 0;
+}

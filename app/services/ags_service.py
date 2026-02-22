@@ -23,6 +23,24 @@ logger = get_logger(__name__)
 # In-memory token cache
 _token_cache: dict[str, Any] = {}
 
+# AGS content types
+CONTENT_TYPE_LINEITEM = "application/vnd.ims.lis.v2.lineitem+json"
+CONTENT_TYPE_SCORE = "application/vnd.ims.lis.v1.score+json"
+
+
+def _build_ags_headers(
+    access_token: str,
+    content_type: str | None = None,
+    accept: str | None = None,
+) -> dict[str, str]:
+    """Build headers for AGS API requests."""
+    headers = {"Authorization": f"Bearer {access_token}"}
+    if content_type:
+        headers["Content-Type"] = content_type
+    if accept:
+        headers["Accept"] = accept
+    return headers
+
 
 def _generate_client_assertion() -> str:
     """
@@ -113,10 +131,7 @@ async def get_lineitem(lineitem_url: str) -> dict[str, Any]:
     async with httpx.AsyncClient() as client:
         response = await client.get(
             lineitem_url,
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Accept": "application/vnd.ims.lis.v2.lineitem+json",
-            },
+            headers=_build_ags_headers(access_token, accept=CONTENT_TYPE_LINEITEM),
             timeout=10.0,
         )
 
@@ -185,10 +200,7 @@ async def submit_score(
         response = await client.post(
             scores_url,
             json=payload,
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/vnd.ims.lis.v1.score+json",
-            },
+            headers=_build_ags_headers(access_token, content_type=CONTENT_TYPE_SCORE),
             timeout=10.0,
         )
 
@@ -233,10 +245,7 @@ async def create_lineitem(
         response = await client.post(
             lineitems_url,
             json=payload,
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/vnd.ims.lis.v2.lineitem+json",
-            },
+            headers=_build_ags_headers(access_token, content_type=CONTENT_TYPE_LINEITEM),
             timeout=10.0,
         )
 
